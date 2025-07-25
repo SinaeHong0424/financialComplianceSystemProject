@@ -1,0 +1,45 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.iml
+.idea/
+.settings/
+.classpath
+.project
+bin/
+
+# Database
+*.log
+*.trc
+*.dmp
+
+# Oracle
+tnsnames.ora
+sqlnet.ora
+
+# Maven
+dependency-reduced-pom.xml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+*.properties.local
+application-local.properties
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
