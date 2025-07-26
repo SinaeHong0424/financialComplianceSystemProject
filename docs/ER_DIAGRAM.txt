@@ -1,0 +1,193 @@
+Visual Representation
+```
+┌───────────────────────────────────────────────────────────┐
+│              FINANCIAL_ENTITIES (Main Registry)                             │
+├───────────────────────────────────────────────────────────┤
+│ PK: entity_id (NUMBER)                                                      │
+│                                                                             │
+│ Attributes:                                                                 │
+│   • entity_name VARCHAR2(255) NOT NULL                                      │
+│   • entity_type VARCHAR2(50) NOT NULL                                       │
+│     └─ CHECK: BANK, INSURANCE, MSB, FINTECH, etc.                          │
+│   • nmls_id VARCHAR2(50)                                                    │
+│   • compliance_status VARCHAR2(50) NOT NULL                                 │
+│     └─ CHECK: COMPLIANT, NON_COMPLIANT, etc.                               │
+│   • risk_level VARCHAR2(20) NOT NULL                                        │
+│     └─ CHECK: LOW, MEDIUM, HIGH, CRITICAL                                  │
+│   • license_number VARCHAR2(100)                                            │
+│   • license_expiry DATE                                                     │
+│   • total_assets NUMBER(18,2)                                               │
+│   • employee_count NUMBER                                                   │
+│   • registration_date DATE NOT NULL                                         │
+│   • is_active CHAR(1) DEFAULT 'Y'                                           │
+└───────────────────────────────────────────────────────────┘
+         │                    │                    │
+         │ 1:N                │ 1:N                │ 1:N
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌──────────────────┐  ┌─────────────────┐  ┌──────────────────┐
+│ COMPLIANCE_      │  │  AUDIT_TRAIL    │  │ ALERT_           │
+│ VIOLATIONS       │  │                 │  │ NOTIFICATIONS    │
+├──────────────────┤  ├─────────────────┤  ├──────────────────┤
+│PK: violation_id  │  │PK: audit_id     │  │PK: alert_id      │
+│FK: entity_id ────┼──┤FK: entity_id ───┼──┤FK: entity_id     │
+│                  │  │                 │  │                  │
+│• violation_type  │  │• action_type    │  │• alert_type      │
+│• description     │  │• action_details │  │• alert_message   │
+│• severity        │  │• action_        │  │• alert_priority  │
+│  └─ LOW, MEDIUM, │  │  timestamp      │  │  └─ LOW, MEDIUM, │
+│     HIGH,        │  │• performed_by   │  │     HIGH, URGENT │
+│     CRITICAL     │  │• before_value   │  │• acknowledged    │
+│• violation_date  │  │• after_value    │  │  CHAR(1)         │
+│• fine_amount     │  │• ip_address     │  │• resolved        │
+│• fine_paid       │  │• session_id     │  │  CHAR(1)         │
+│• status          │  │                 │  │• alert_          │
+│  └─ UNDER_       │  │  [IMMUTABLE]    │  │  timestamp       │
+│     REVIEW,      │  │                 │  │                  │
+│     CONFIRMED,   │  └─────────────────┘  └──────────────────┘
+│     RESOLVED     │
+│• resolution_date │
+│• corrective_     │
+│  action (CLOB)   │
+└──────────────────┘
+```
+
+Relationship Details
+
+1. FINANCIAL_ENTITIES to COMPLIANCE_VIOLATIONS
+Type:** One-to-Many (1:N)  
+Description: One entity can have multiple violations  
+Foreign Key: compliance_violations.entity_id → financial_entities.entity_id  
+Delete Rule: RESTRICT (cannot delete entity with violations)  
+Business Rule: Every violation must be associated with an entity
+
+2. FINANCIAL_ENTITIES to AUDIT_TRAIL
+Type: One-to-Many (1:N)  
+Description: One entity can have multiple audit entries  
+Foreign Key: audit_trail.entity_id → financial_entities.entity_id  
+Delete Rule: RESTRICT  
+Note: entity_id is nullable in audit_trail (system-level actions)
+
+3. FINANCIAL_ENTITIES to ALERT_NOTIFICATIONS
+Type: One-to-Many (1:N)  
+Description: One entity can have multiple alerts  
+Foreign Key: alert_notifications.entity_id → financial_entities.entity_id  
+Delete Rule: RESTRICT  
+Business Rule: Alerts must be acknowledged before entity deactivation
+
+
+
+Cardinality Rules
+
+| Relationship | Minimum | Maximum | Description |
+|--------------|---------|---------|-------------|
+| Entity → Violations | 0 | Unlimited | New entities may have no violations |
+| Entity → Audit Log | 1 | Unlimited | Registration creates first audit entry |
+| Entity → Alerts | 0 | Unlimited | Not all entities have active alerts |
+| Violation → Entity | 1 | 1 | Every violation must have an entity |
+| Audit → Entity | 0 | 1 | System actions may not relate to entity |
+| Alert → Entity | 1 | 1 | Every alert must have an entity |
+
+
+Data Flow Example
+```
+┌─────────────────────────────────────────────────────────┐
+│ Scenario: New Violation Discovered                     │
+└─────────────────────────────────────────────────────────┘
+
+1. Compliance Officer discovers AML deficiency
+        ↓
+2. INSERT into COMPLIANCE_VIOLATIONS
+   ├─ entity_id: 1001 (QuickCash MSB)
+   ├─ violation_type: "AML Deficiency"
+   ├─ severity: "HIGH"
+   └─ status: "UNDER_REVIEW"
+        ↓
+3. Trigger: Automatic risk escalation
+   UPDATE financial_entities
+   SET risk_level = 'HIGH' WHERE entity_id = 1001
+        ↓
+4. INSERT into AUDIT_TRAIL
+   ├─ action_type: "VIOLATION_RECORDED"
+   ├─ performed_by: "compliance_officer_1"
+   └─ action_details: "HIGH severity violation"
+        ↓
+5. INSERT into ALERT_NOTIFICATIONS
+   ├─ alert_type: "VIOLATION"
+   ├─ alert_priority: "HIGH"
+   └─ alert_message: "Review required for QuickCash"
+        ↓
+6. Notification sent to compliance team
+```
+
+
+Index Usage Diagram
+```
+Query: Find all HIGH/CRITICAL risk entities
+
+SELECT entity_name, risk_level, compliance_status
+FROM financial_entities
+WHERE risk_level IN ('HIGH', 'CRITICAL')
+  AND is_active = 'Y';
+
+Index Access Path:
+    ┌──────────────────────┐
+    │ idx_entity_risk             │ ← Used for WHERE risk_level
+    └──────────────────────┘
+            ↓
+    ┌──────────────────────┐
+    │ idx_entity_active           │ ← Used for AND is_active
+    └──────────────────────┘
+            ↓
+    ┌──────────────────────┐
+    │ TABLE ACCESS BY             │
+    │ ROWID (efficient)           │
+    └──────────────────────┘
+
+
+Normalization Proof
+
+Example: Why separate tables?
+Normalized (Good):
+```sql
+CREATE TABLE entities (entity_id, entity_name, ...);
+CREATE TABLE violations (violation_id, entity_id, ...);
+CREATE TABLE audit_trail (audit_id, entity_id, ...);
+```
+Benefits:**
+- No redundant data
+- Single point of update
+- Flexible relationships
+
+---
+
+Sequence Diagram: Entity Registration
+```
+User          Application       Database
+ │                │                  │
+ │ Register      │                   │
+ │ Entity        │                   │
+ │──────────────>│                   │
+ │               │ Get Next ID        │
+ │               │ (entity_seq)       │
+ │               │    ───────────────>│
+ │               │   1001             │
+ │               │    <───────────────│
+ │               │                    │
+ │               │ INSERT entity       │
+ │               │    ───────────────>│
+ │               │   Success          │
+ │               │    <───────────────│
+ │               │                    │
+ │               │ INSERT audit       │
+ │               │    ───────────────>│
+ │               │   Success          │
+ │               │    <───────────────│
+ │               │                    │
+ │               │ INSERT alert       │
+ │               │    ───────────────>│
+ │               │   Success          │
+ │               │    <───────────────│
+ │   Confirmed   │                     │
+ │   <───────────│                     │
+```
