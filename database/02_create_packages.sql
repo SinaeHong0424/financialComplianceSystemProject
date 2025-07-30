@@ -30,7 +30,7 @@ CREATE OR REPLACE PACKAGE pkg_compliance_mgmt AS
         p_contact_phone     VARCHAR2 DEFAULT NULL
     ) RETURN NUMBER;
     
-    -- Update compliance status
+    -- update compliance status
     PROCEDURE update_compliance_status(
         p_entity_id         NUMBER,
         p_new_status        VARCHAR2,
