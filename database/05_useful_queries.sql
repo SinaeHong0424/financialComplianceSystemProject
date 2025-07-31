@@ -3,7 +3,6 @@
 -- ============================================================================
 
 -- SECTION 1: ENTITY QUERIES
-
 SELECT 
     entity_id,
     entity_name,
