@@ -3,221 +3,69 @@ package com.dfs.compliance.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 /**
- * Domain model representing a financial institution regulated by DFS.
+ * Entity class representing a financial institution in the DFS compliance system.
+ * Maps to the FINANCIAL_ENTITIES table in Oracle database.
  * 
- * This class corresponds to the FINANCIAL_ENTITIES table in the database.
- * It includes validation, business logic, and proper encapsulation.
- * 
+ * @author DFS Technology Bureau
+ * @version 1.0
+ * @since 2025-08-03
  */
 public class FinancialEntity {
     
-    // Primary Key
-    private Long entityId;
+    // Entity Type Enum
+    public enum EntityType {
+        BANK, INSURANCE, MSB, FINTECH, CREDIT_UNION, BROKER_DEALER
+    }
     
-    // Basic Information
+    // Compliance Status Enum
+    public enum ComplianceStatus {
+        COMPLIANT, NON_COMPLIANT, PENDING_REVIEW, UNDER_INVESTIGATION, PROBATION, SUSPENDED
+    }
+    
+    // Risk Level Enum
+    public enum RiskLevel {
+        LOW, MEDIUM, HIGH, CRITICAL
+    }
+    
+    // Fields matching database schema (financial_entities table)
+    private Long entityId;
     private String entityName;
     private EntityType entityType;
     private String nmlsId;
     private String dbaName;
-    
-    // Contact Information
     private String primaryContact;
     private String contactEmail;
     private String contactPhone;
-    
-    // Address Information
     private String addressLine1;
     private String addressLine2;
     private String city;
     private String state;
     private String zipCode;
-    
-    // Licensing Information
+    private LocalDate registrationDate;
     private String licenseNumber;
     private LocalDate licenseExpiry;
-    private LocalDate registrationDate;
-    
-    // Compliance Information
     private ComplianceStatus complianceStatus;
     private RiskLevel riskLevel;
     private LocalDate lastReviewDate;
     private LocalDate nextReviewDate;
-    
-    // Financial Information
     private BigDecimal totalAssets;
     private Integer employeeCount;
-    
-    // Status
     private boolean isActive;
-    
-    // Additional Information
     private String notes;
-    
-    // Audit Columns
     private LocalDateTime createdDate;
     private String createdBy;
     private LocalDateTime modifiedDate;
     private String modifiedBy;
     
-    /**
-     * Entity types supported by DFS.
-     */
-    public enum EntityType {
-        BANK("Bank"),
-        INSURANCE("Insurance Company"),
-        MSB("Money Service Business"),
-        FINTECH("FinTech Company"),
-        CREDIT_UNION("Credit Union"),
-        BROKER_DEALER("Broker-Dealer");
-        
-        private final String displayName;
-        
-        EntityType(String displayName) {
-            this.displayName = displayName;
-        }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
-    
-    /**
-     * Compliance status values.
-     */
-    public enum ComplianceStatus {
-        COMPLIANT("Compliant"),
-        NON_COMPLIANT("Non-Compliant"),
-        PENDING_REVIEW("Pending Review"),
-        UNDER_INVESTIGATION("Under Investigation"),
-        PROBATION("Probation"),
-        SUSPENDED("Suspended");
-        
-        private final String displayName;
-        
-        ComplianceStatus(String displayName) {
-            this.displayName = displayName;
-        }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
-    
-    /**
-     * Risk level classifications.
-     */
-    public enum RiskLevel {
-        LOW("Low Risk"),
-        MEDIUM("Medium Risk"),
-        HIGH("High Risk"),
-        CRITICAL("Critical Risk");
-        
-        private final String displayName;
-        
-        RiskLevel(String displayName) {
-            this.displayName = displayName;
-        }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
-    
     // Constructors
-    
-    /**
-     * Default constructor.
-     */
     public FinancialEntity() {
-        this.isActive = true;
-        this.state = "NY";
-        this.complianceStatus = ComplianceStatus.PENDING_REVIEW;
-        this.riskLevel = RiskLevel.MEDIUM;
-    }
-    
-    /**
-     * Constructor with required fields.
-     * 
-     * @param entityName name of the financial entity
-     * @param entityType type of entity
-     */
-    public FinancialEntity(String entityName, EntityType entityType) {
-        this();
-        this.entityName = entityName;
-        this.entityType = entityType;
-        this.registrationDate = LocalDate.now();
-    }
-    
-    // Business Logic Methods
-    
-    /**
-     * Checks if the entity's license is expired.
-     * 
-     * @return true if license is expired, false otherwise
-     */
-    public boolean isLicenseExpired() {
-        if (licenseExpiry == null) {
-            return false;
-        }
-        return licenseExpiry.isBefore(LocalDate.now());
-    }
-    
-    /**
-     * Checks if the entity's license expires within specified days.
-     * 
-     * @param days number of days to check
-     * @return true if license expires within specified days
-     */
-    public boolean isLicenseExpiringSoon(int days) {
-        if (licenseExpiry == null) {
-            return false;
-        }
-        LocalDate futureDate = LocalDate.now().plusDays(days);
-        return licenseExpiry.isBefore(futureDate) && !isLicenseExpired();
-    }
-    
-    /**
-     * Checks if entity review is overdue.
-     * 
-     * @return true if review is overdue
-     */
-    public boolean isReviewOverdue() {
-        if (nextReviewDate == null) {
-            return false;
-        }
-        return nextReviewDate.isBefore(LocalDate.now());
-    }
-    
-    /**
-     * Checks if entity is in good standing (compliant and active).
-     * 
-     * @return true if in good standing
-     */
-    public boolean isInGoodStanding() {
-        return isActive 
-            && complianceStatus == ComplianceStatus.COMPLIANT
-            && !isLicenseExpired()
-            && !isReviewOverdue();
-    }
-    
-    /**
-     * Checks if entity requires immediate attention.
-     * 
-     * @return true if requires attention
-     */
-    public boolean requiresAttention() {
-        return riskLevel == RiskLevel.CRITICAL
-            || complianceStatus == ComplianceStatus.SUSPENDED
-            || complianceStatus == ComplianceStatus.UNDER_INVESTIGATION
-            || isLicenseExpired()
-            || isReviewOverdue();
+        this.isActive = true; // Default value
+        this.state = "NY"; // Default value
     }
     
     // Getters and Setters
-    
     public Long getEntityId() {
         return entityId;
     }
@@ -322,6 +170,14 @@ public class FinancialEntity {
         this.zipCode = zipCode;
     }
     
+    public LocalDate getRegistrationDate() {
+        return registrationDate;
+    }
+    
+    public void setRegistrationDate(LocalDate registrationDate) {
+        this.registrationDate = registrationDate;
+    }
+    
     public String getLicenseNumber() {
         return licenseNumber;
     }
@@ -336,14 +192,6 @@ public class FinancialEntity {
     
     public void setLicenseExpiry(LocalDate licenseExpiry) {
         this.licenseExpiry = licenseExpiry;
-    }
-    
-    public LocalDate getRegistrationDate() {
-        return registrationDate;
-    }
-    
-    public void setRegistrationDate(LocalDate registrationDate) {
-        this.registrationDate = registrationDate;
     }
     
     public ComplianceStatus getComplianceStatus() {
@@ -442,27 +290,13 @@ public class FinancialEntity {
         this.modifiedBy = modifiedBy;
     }
     
-    // Object Methods
-    
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        FinancialEntity that = (FinancialEntity) o;
-        return Objects.equals(entityId, that.entityId);
-    }
-    
-    @Override
-    public int hashCode() {
-        return Objects.hash(entityId);
-    }
-    
     @Override
     public String toString() {
         return "FinancialEntity{" +
                 "entityId=" + entityId +
                 ", entityName='" + entityName + '\'' +
                 ", entityType=" + entityType +
+                ", licenseNumber='" + licenseNumber + '\'' +
                 ", complianceStatus=" + complianceStatus +
                 ", riskLevel=" + riskLevel +
                 ", isActive=" + isActive +

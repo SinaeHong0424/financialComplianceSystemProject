@@ -1,164 +1,172 @@
 package com.dfs.compliance.util;
 
-import oracle.ucp.jdbc.PoolDataSource;
-import oracle.ucp.jdbc.PoolDataSourceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import oracle.ucp.jdbc.PoolDataSource;
+import oracle.ucp.jdbc.PoolDataSourceFactory;
+
 /**
  * Database connection utility using Oracle Universal Connection Pool (UCP).
  * 
- * <p>This class manages database connections using connection pooling for
- * optimal performance and resource utilization. It follows the Singleton
- * pattern to ensure only one connection pool exists per application.
- * 
- * <p>Configuration is loaded from application.properties file.
- * 
- * @author DFS Technology Bureau
- * @version 1.0
- * @since 2025-08-04
+ * <p>Implements singleton pattern to ensure single connection pool instance.
+ * Provides connection pooling for improved performance and resource management.
  */
 public class DatabaseConnection {
     
     private static final Logger logger = LoggerFactory.getLogger(DatabaseConnection.class);
     
     private static DatabaseConnection instance;
-    private PoolDataSource poolDataSource;
-    private Properties properties;
+    private static PoolDataSource poolDataSource;
+    private static Properties properties;
     
     /**
-     * Private constructor to prevent direct instantiation.
-     * Initializes the connection pool with properties from configuration file.
+     * Private constructor to prevent instantiation.
+     * Initializes the connection pool with configuration from properties file.
      * 
-     * @throws SQLException if connection pool initialization fails
-     * @throws IOException if properties file cannot be loaded
+     * @throws SQLException if pool initialization fails
      */
-    private DatabaseConnection() throws SQLException, IOException {
-        loadProperties();
-        initializeConnectionPool();
+    private DatabaseConnection() throws SQLException {
+        try {
+            initializePool();
+            logger.info("Database connection pool initialized successfully");
+        } catch (Exception e) {
+            logger.error("Failed to initialize database connection pool: {}", e.getMessage());
+            throw new SQLException("Database pool initialization failed", e);
+        }
     }
     
     /**
-     * Gets the singleton instance of DatabaseConnection.
-     * Creates a new instance if one doesn't exist.
+     * Gets singleton instance of DatabaseConnection.
      * 
-     * @return the singleton DatabaseConnection instance
-     * @throws SQLException if connection pool initialization fails
-     * @throws IOException if properties file cannot be loaded
+     * @return DatabaseConnection instance
+     * @throws SQLException if initialization fails
      */
-    public static synchronized DatabaseConnection getInstance() throws SQLException, IOException {
+    public static synchronized DatabaseConnection getInstance() throws SQLException {
         if (instance == null) {
             instance = new DatabaseConnection();
-            logger.info("DatabaseConnection instance created successfully");
         }
         return instance;
     }
     
     /**
-     * Loads database configuration from application.properties file.
+     * Initializes Oracle UCP connection pool.
      * 
-     * @throws IOException if properties file cannot be found or read
+     * @throws SQLException if pool setup fails
+     * @throws IOException if properties file cannot be read
+     */
+    private void initializePool() throws SQLException, IOException {
+        loadProperties();
+        
+        poolDataSource = PoolDataSourceFactory.getPoolDataSource();
+        
+        // Basic connection properties
+        poolDataSource.setConnectionFactoryClassName("oracle.jdbc.pool.OracleDataSource");
+        poolDataSource.setURL(getProperty("db.url"));
+        poolDataSource.setUser(getProperty("db.username"));
+        poolDataSource.setPassword(getProperty("db.password"));
+        
+        // Pool size configuration
+        poolDataSource.setInitialPoolSize(
+            Integer.parseInt(getProperty("db.pool.initialSize", "5"))
+        );
+        poolDataSource.setMinPoolSize(
+            Integer.parseInt(getProperty("db.pool.minSize", "5"))
+        );
+        poolDataSource.setMaxPoolSize(
+            Integer.parseInt(getProperty("db.pool.maxSize", "20"))
+        );
+        
+        // Connection timeout configuration (in seconds)
+        poolDataSource.setConnectionWaitTimeout(
+            Integer.parseInt(getProperty("db.pool.connectionWaitTimeout", "30"))
+        );
+        
+        // Inactive connection timeout (in seconds)
+        poolDataSource.setInactiveConnectionTimeout(
+            Integer.parseInt(getProperty("db.pool.inactiveConnectionTimeout", "300"))
+        );
+        
+        // Validate connections on borrow
+        poolDataSource.setValidateConnectionOnBorrow(true);
+        
+        logger.info("Connection pool configured: min={}, max={}, initial={}", 
+                    poolDataSource.getMinPoolSize(),
+                    poolDataSource.getMaxPoolSize(),
+                    poolDataSource.getInitialPoolSize());
+    }
+    
+    /**
+     * Loads database properties from application.properties file.
+     * 
+     * @throws IOException if properties file cannot be read
      */
     private void loadProperties() throws IOException {
         properties = new Properties();
-        
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("application.properties")) {
-            
             if (input == null) {
-                logger.error("Unable to find application.properties");
-                throw new IOException("application.properties file not found in classpath");
+                logger.warn("application.properties not found, using defaults");
+                setDefaultProperties();
+                return;
             }
-            
             properties.load(input);
-            logger.info("Database properties loaded successfully");
-            
-        } catch (IOException e) {
-            logger.error("Error loading application.properties: {}", e.getMessage());
-            throw e;
+            logger.debug("Loaded properties from application.properties");
         }
     }
     
     /**
-     * Initializes Oracle Universal Connection Pool (UCP) with configured parameters.
-     * 
-     * @throws SQLException if pool initialization fails
+     * Sets default database properties.
      */
-    private void initializeConnectionPool() throws SQLException {
-        try {
-            poolDataSource = PoolDataSourceFactory.getPoolDataSource();
-            
-            // Connection properties
-            poolDataSource.setConnectionFactoryClassName("oracle.jdbc.pool.OracleDataSource");
-            poolDataSource.setURL(properties.getProperty("db.url"));
-            poolDataSource.setUser(properties.getProperty("db.username"));
-            poolDataSource.setPassword(properties.getProperty("db.password"));
-            
-            // Pool configuration
-            poolDataSource.setInitialPoolSize(
-                Integer.parseInt(properties.getProperty("db.pool.initialSize", "5"))
-            );
-            poolDataSource.setMinPoolSize(
-                Integer.parseInt(properties.getProperty("db.pool.minSize", "5"))
-            );
-            poolDataSource.setMaxPoolSize(
-                Integer.parseInt(properties.getProperty("db.pool.maxSize", "20"))
-            );
-            
-            // Connection timeout (30 seconds)
-            poolDataSource.setConnectionWaitTimeout(
-                Integer.parseInt(properties.getProperty("db.pool.connectionWaitTimeout", "30"))
-            );
-            
-            // Inactive connection timeout (5 minutes)
-            poolDataSource.setInactiveConnectionTimeout(
-                Integer.parseInt(properties.getProperty("db.pool.inactiveConnectionTimeout", "300"))
-            );
-            
-            // Validate connection on borrow
-            poolDataSource.setValidateConnectionOnBorrow(true);
-            
-            // Connection pool name
-            poolDataSource.setConnectionPoolName("DFS_COMPLIANCE_POOL");
-            
-            logger.info("Connection pool initialized successfully");
-            logger.info("Pool configuration - Initial: {}, Min: {}, Max: {}", 
-                poolDataSource.getInitialPoolSize(),
-                poolDataSource.getMinPoolSize(),
-                poolDataSource.getMaxPoolSize()
-            );
-            
-        } catch (SQLException e) {
-            logger.error("Failed to initialize connection pool: {}", e.getMessage());
-            throw e;
-        }
+    private void setDefaultProperties() {
+        properties.setProperty("db.url", "jdbc:oracle:thin:@localhost:1521/FREE");
+        properties.setProperty("db.username", "dfs_compliance");
+        properties.setProperty("db.password", "SecurePassword123");
+        properties.setProperty("db.pool.initialSize", "5");
+        properties.setProperty("db.pool.minSize", "5");
+        properties.setProperty("db.pool.maxSize", "20");
+        properties.setProperty("db.pool.connectionWaitTimeout", "30");
+        properties.setProperty("db.pool.inactiveConnectionTimeout", "300");
     }
     
     /**
-     * Gets a connection from the connection pool.
+     * Gets a property value with optional default.
      * 
-     * <p>Important: Connections must be closed in a finally block or
-     * try-with-resources statement to return them to the pool.
+     * @param key property key
+     * @param defaultValue default value if property not found
+     * @return property value or default
+     */
+    private String getProperty(String key, String defaultValue) {
+        return properties.getProperty(key, defaultValue);
+    }
+    
+    /**
+     * Gets a property value.
      * 
-     * @return a database connection from the pool
-     * @throws SQLException if unable to get connection
+     * @param key property key
+     * @return property value
+     */
+    public String getProperty(String key) {
+        return properties.getProperty(key);
+    }
+    
+    /**
+     * Gets a connection from the pool.
+     * 
+     * @return database connection
+     * @throws SQLException if connection cannot be obtained
      */
     public Connection getConnection() throws SQLException {
-        if (poolDataSource == null) {
-            logger.error("Connection pool not initialized");
-            throw new SQLException("Connection pool not initialized");
-        }
-        
         try {
-            Connection connection = poolDataSource.getConnection();
+            Connection conn = poolDataSource.getConnection();
             logger.debug("Connection obtained from pool");
-            return connection;
+            return conn;
         } catch (SQLException e) {
             logger.error("Failed to get connection from pool: {}", e.getMessage());
             throw e;
@@ -166,42 +174,15 @@ public class DatabaseConnection {
     }
     
     /**
-     * Gets current connection pool statistics.
-     * Useful for monitoring and debugging.
-     * 
-     * @return formatted string with pool statistics
-     * @throws SQLException if unable to retrieve statistics
-     */
-    public String getPoolStatistics() throws SQLException {
-        if (poolDataSource == null) {
-            return "Connection pool not initialized";
-        }
-        
-        return String.format(
-            "Pool Statistics - Available: %d, Borrowed: %d, Total: %d",
-            poolDataSource.getAvailableConnectionsCount(),
-            poolDataSource.getBorrowedConnectionsCount(),
-            poolDataSource.getTotalConnectionsCount()
-        );
-    }
-    
-    /**
      * Tests database connectivity.
      * 
-     * @return true if connection successful, false otherwise
+     * @return true if connection is successful
      */
     public boolean testConnection() {
         try (Connection conn = getConnection()) {
-            boolean isValid = conn.isValid(5); // 5 second timeout
-            
-            if (isValid) {
-                logger.info("Database connection test successful");
-            } else {
-                logger.warn("Database connection test failed");
-            }
-            
-            return isValid;
-            
+            boolean valid = conn.isValid(5);
+            logger.info("Database connection test: {}", valid ? "SUCCESS" : "FAILED");
+            return valid;
         } catch (SQLException e) {
             logger.error("Database connection test failed: {}", e.getMessage());
             return false;
@@ -209,33 +190,40 @@ public class DatabaseConnection {
     }
     
     /**
-     * Closes the connection pool and releases all resources.
-     * Should be called during application shutdown.
+     * Gets connection pool statistics.
      * 
-     * @throws SQLException if error occurs while closing pool
+     * @return formatted statistics string
      */
-    public void closePool() throws SQLException {
-        if (poolDataSource != null) {
-            try {
-                // Note: UCP doesn't have explicit close method
-                // Connections will be closed when they return to pool
-                logger.info("Connection pool shutdown initiated");
-                poolDataSource = null;
-                instance = null;
-            } catch (Exception e) {
-                logger.error("Error during pool shutdown: {}", e.getMessage());
-                throw new SQLException("Error closing connection pool", e);
-            }
+    public String getPoolStatistics() {
+        try {
+            return String.format(
+                "Pool Statistics - Available: %d, Borrowed: %d, Total: %d",
+                poolDataSource.getAvailableConnectionsCount(),
+                poolDataSource.getBorrowedConnectionsCount(),
+                poolDataSource.getAvailableConnectionsCount() + 
+                    poolDataSource.getBorrowedConnectionsCount()
+            );
+        } catch (SQLException e) {
+            logger.error("Failed to get pool statistics: {}", e.getMessage());
+            return "Pool statistics unavailable";
         }
     }
     
     /**
-     * Gets a property value from configuration.
-     * 
-     * @param key property key
-     * @return property value or null if not found
+     * Closes the connection pool and releases all resources.
+     * Should be called during application shutdown.
      */
-    public String getProperty(String key) {
-        return properties.getProperty(key);
+    public void closePool() {
+        if (poolDataSource != null) {
+            try {
+                logger.info("Closing connection pool...");
+                // UCP doesn't have explicit close, connections are released automatically
+                poolDataSource = null;
+                instance = null;
+                logger.info("Connection pool closed successfully");
+            } catch (Exception e) {
+                logger.error("Error closing connection pool: {}", e.getMessage());
+            }
+        }
     }
 }
