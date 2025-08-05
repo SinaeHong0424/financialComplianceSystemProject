@@ -27,7 +27,7 @@ import com.dfs.compliance.model.FinancialEntity;
 import com.dfs.compliance.model.FinancialEntity.ComplianceStatus;
 import com.dfs.compliance.model.FinancialEntity.EntityType;
 import com.dfs.compliance.model.FinancialEntity.RiskLevel;
-import com.dfs.compliance.util.DatabaseConnection;
+import com.dfs.compliance.DatabaseConnection;
 
 /**
  * Unit tests for FinancialEntityDAO.
@@ -53,9 +53,9 @@ class FinancialEntityDAOTest {
         entityDAO = new FinancialEntityDAOImpl();
         
         // Test database connection
-        try (Connection conn = DatabaseConnection.getInstance().getConnection()) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
             assertTrue(conn.isValid(5), "Database connection should be valid");
-            logger.info("✓ Database connection test passed");
+            logger.info("??Database connection test passed");
         }
     }
     
@@ -93,7 +93,7 @@ class FinancialEntityDAOTest {
         assertEquals(EntityType.BANK, created.getEntityType());
         assertTrue(created.isActive(), "New entity should be active");
         
-        logger.info("✓ Created entity with ID: {}", testEntityId);
+        logger.info("??Created entity with ID: {}", testEntityId);
     }
     
     @Test
@@ -110,7 +110,7 @@ class FinancialEntityDAOTest {
         assertEquals("JUnit Test Bank", result.get().getEntityName());
         assertEquals(EntityType.BANK, result.get().getEntityType());
         
-        logger.info("✓ Found entity: {}", result.get().getEntityName());
+        logger.info("??Found entity: {}", result.get().getEntityName());
     }
     
     @Test
@@ -125,7 +125,7 @@ class FinancialEntityDAOTest {
         // Assert
         assertFalse(result.isPresent(), "Non-existent entity should not be found");
         
-        logger.info("✓ Correctly returned empty Optional");
+        logger.info("??Correctly returned empty Optional");
     }
     
     @Test
@@ -143,7 +143,7 @@ class FinancialEntityDAOTest {
         assertTrue(entities.stream().anyMatch(e -> e.getEntityId().equals(testEntityId)),
                 "Should include test entity");
         
-        logger.info("✓ Found {} active entities", entities.size());
+        logger.info("??Found {} active entities", entities.size());
     }
     
     @Test
@@ -161,7 +161,7 @@ class FinancialEntityDAOTest {
         assertTrue(banks.stream().allMatch(e -> e.getEntityType() == EntityType.BANK),
                 "All entities should be banks");
         
-        logger.info("✓ Found {} banks", banks.size());
+        logger.info("??Found {} banks", banks.size());
     }
     
     @Test
@@ -180,7 +180,7 @@ class FinancialEntityDAOTest {
                 e -> e.getComplianceStatus() == ComplianceStatus.PENDING_REVIEW),
                 "All entities should have PENDING_REVIEW status");
         
-        logger.info("✓ Found {} entities with PENDING_REVIEW status", pending.size());
+        logger.info("??Found {} entities with PENDING_REVIEW status", pending.size());
     }
     
     @Test
@@ -197,7 +197,7 @@ class FinancialEntityDAOTest {
         assertTrue(mediumRisk.stream().allMatch(e -> e.getRiskLevel() == RiskLevel.MEDIUM),
                 "All entities should have MEDIUM risk level");
         
-        logger.info("✓ Found {} entities with MEDIUM risk", mediumRisk.size());
+        logger.info("??Found {} entities with MEDIUM risk", mediumRisk.size());
     }
     
     @Test
@@ -214,7 +214,7 @@ class FinancialEntityDAOTest {
         assertTrue(expiring.stream().anyMatch(e -> e.getEntityId().equals(testEntityId)),
                 "Should include test entity with license expiring in 1 year");
         
-        logger.info("✓ Found {} entities with licenses expiring in 365 days", expiring.size());
+        logger.info("??Found {} entities with licenses expiring in 365 days", expiring.size());
     }
     
     @Test
@@ -232,7 +232,7 @@ class FinancialEntityDAOTest {
         assertTrue(results.stream().anyMatch(e -> e.getEntityName().contains("JUnit")),
                 "Results should contain 'JUnit' in name");
         
-        logger.info("✓ Found {} entities matching 'JUnit'", results.size());
+        logger.info("??Found {} entities matching 'JUnit'", results.size());
     }
     
     @Test
@@ -261,7 +261,7 @@ class FinancialEntityDAOTest {
         assertEquals(150, verifyOpt.get().getEmployeeCount());
         assertEquals("Updated by JUnit test", verifyOpt.get().getNotes());
         
-        logger.info("✓ Successfully updated entity");
+        logger.info("??Successfully updated entity");
     }
     
     @Test
@@ -284,7 +284,7 @@ class FinancialEntityDAOTest {
         assertTrue(verifyOpt.isPresent(), "Entity should exist");
         assertEquals(ComplianceStatus.COMPLIANT, verifyOpt.get().getComplianceStatus());
         
-        logger.info("✓ Successfully updated compliance status to COMPLIANT");
+        logger.info("??Successfully updated compliance status to COMPLIANT");
     }
     
     @Test
@@ -307,7 +307,7 @@ class FinancialEntityDAOTest {
         assertTrue(verifyOpt.isPresent(), "Entity should exist");
         assertEquals(RiskLevel.LOW, verifyOpt.get().getRiskLevel());
         
-        logger.info("✓ Successfully updated risk level to LOW");
+        logger.info("??Successfully updated risk level to LOW");
     }
     
     @Test
@@ -322,7 +322,7 @@ class FinancialEntityDAOTest {
         // Assert
         assertTrue(count > 0, "Should have at least one entity");
         
-        logger.info("✓ Total active entities: {}", count);
+        logger.info("??Total active entities: {}", count);
     }
     
     @Test
@@ -337,7 +337,7 @@ class FinancialEntityDAOTest {
         // Assert
         assertTrue(bankCount > 0, "Should have at least one bank");
         
-        logger.info("✓ Total banks: {}", bankCount);
+        logger.info("??Total banks: {}", bankCount);
     }
     
     @Test
@@ -362,7 +362,7 @@ class FinancialEntityDAOTest {
         assertFalse(allActive.stream().anyMatch(e -> e.getEntityId().equals(testEntityId)),
                 "Deleted entity should not appear in active entities list");
         
-        logger.info("✓ Successfully soft deleted entity (is_active = 'N')");
+        logger.info("??Successfully soft deleted entity (is_active = 'N')");
     }
     
     @Test
@@ -381,7 +381,7 @@ class FinancialEntityDAOTest {
             entityDAO.update(entity);
         }, "Update with null ID should throw IllegalArgumentException");
         
-        logger.info("✓ Correctly threw IllegalArgumentException for null ID");
+        logger.info("??Correctly threw IllegalArgumentException for null ID");
     }
     
     @AfterAll
@@ -394,3 +394,4 @@ class FinancialEntityDAOTest {
         // This is intentional for audit trail purposes
     }
 }
+

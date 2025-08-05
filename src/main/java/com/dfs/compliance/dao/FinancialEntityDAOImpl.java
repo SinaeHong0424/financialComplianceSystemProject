@@ -16,11 +16,11 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.dfs.compliance.DatabaseConnection;
 import com.dfs.compliance.model.FinancialEntity;
 import com.dfs.compliance.model.FinancialEntity.ComplianceStatus;
 import com.dfs.compliance.model.FinancialEntity.EntityType;
 import com.dfs.compliance.model.FinancialEntity.RiskLevel;
-import com.dfs.compliance.util.DatabaseConnection;
 
 /**
  * JDBC implementation of FinancialEntityDAO.
@@ -116,7 +116,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public FinancialEntity create(FinancialEntity entity) throws SQLException {
         logger.debug("Creating new financial entity: {}", entity.getEntityName());
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(INSERT_ENTITY, 
                      new String[]{"entity_id"})) {
             
@@ -154,7 +154,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public Optional<FinancialEntity> findById(Long entityId) throws SQLException {
         logger.debug("Finding entity by ID: {}", entityId);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_BY_ID)) {
             
             pstmt.setLong(1, entityId);
@@ -180,7 +180,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findAll() throws SQLException {
         logger.debug("Finding all active entities");
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_ALL);
              ResultSet rs = pstmt.executeQuery()) {
             
@@ -203,7 +203,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findByType(EntityType entityType) throws SQLException {
         logger.debug("Finding entities by type: {}", entityType);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_BY_TYPE)) {
             
             pstmt.setString(1, entityType.name());
@@ -229,7 +229,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findByComplianceStatus(ComplianceStatus status) throws SQLException {
         logger.debug("Finding entities by compliance status: {}", status);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_BY_COMPLIANCE_STATUS)) {
             
             pstmt.setString(1, status.name());
@@ -255,7 +255,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findByRiskLevel(RiskLevel riskLevel) throws SQLException {
         logger.debug("Finding entities by risk level: {}", riskLevel);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_BY_RISK_LEVEL)) {
             
             pstmt.setString(1, riskLevel.name());
@@ -281,7 +281,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findEntitiesWithExpiringLicenses(int daysAhead) throws SQLException {
         logger.debug("Finding entities with licenses expiring in {} days", daysAhead);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_EXPIRING_LICENSES)) {
             
             pstmt.setInt(1, daysAhead);
@@ -307,7 +307,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> findEntitiesWithOverdueReviews() throws SQLException {
         logger.debug("Finding entities with overdue reviews");
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SELECT_OVERDUE_REVIEWS);
              ResultSet rs = pstmt.executeQuery()) {
             
@@ -330,7 +330,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public List<FinancialEntity> searchByName(String name) throws SQLException {
         logger.debug("Searching entities by name: {}", name);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SEARCH_BY_NAME)) {
             
             pstmt.setString(1, "%" + name + "%");
@@ -364,7 +364,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
             throw new IllegalArgumentException("Entity ID cannot be null for update");
         }
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(UPDATE_ENTITY)) {
             
             setEntityParameters(pstmt, entity, true);
@@ -392,7 +392,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
         
         String sql = "{CALL pkg_compliance_mgmt.update_compliance_status(?, ?, ?)}";
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              CallableStatement cstmt = conn.prepareCall(sql)) {
             
             cstmt.setLong(1, entityId);
@@ -420,7 +420,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
         
         String sql = "{CALL pkg_compliance_mgmt.update_risk_level(?, ?, ?)}";
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              CallableStatement cstmt = conn.prepareCall(sql)) {
             
             cstmt.setLong(1, entityId);
@@ -449,7 +449,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public boolean delete(Long entityId) throws SQLException {
         logger.debug("Soft deleting entity ID: {}", entityId);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(SOFT_DELETE)) {
             
             pstmt.setLong(1, entityId);
@@ -478,7 +478,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public long count() throws SQLException {
         logger.debug("Counting all active entities");
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(COUNT_ALL);
              ResultSet rs = pstmt.executeQuery()) {
             
@@ -500,7 +500,7 @@ public class FinancialEntityDAOImpl implements FinancialEntityDAO {
     public long countByType(EntityType entityType) throws SQLException {
         logger.debug("Counting entities by type: {}", entityType);
         
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(COUNT_BY_TYPE)) {
             
             pstmt.setString(1, entityType.name());
